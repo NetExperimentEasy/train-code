@@ -71,7 +71,6 @@ def rlcc_override_defaults(env, parser):
         adaptive_stddev=False,
         policy_initialization="torch_default",
         reward_scale=1,
-        rollout=8,  # 64 rollout? remote worker?
         max_grad_norm=3.5,
         num_epochs=2,  # 
         num_batches_per_epoch=4, #
@@ -81,6 +80,7 @@ def rlcc_override_defaults(env, parser):
         learning_rate=0.00295,
         lr_schedule="linear_decay",
         shuffle_minibatches=False,
+        rollout=64,  # 64 rollout? rollout step < env steps always
         gamma=0.99,
         gae_lambda=0.95,
         with_vtrace=False,
@@ -89,9 +89,11 @@ def rlcc_override_defaults(env, parser):
         normalize_returns=True, #
         value_bootstrap=True,
         experiment_summaries_interval=3,
-        save_every_sec=60,  #
+        save_every_sec=120,  #
         serial_mode=False,  # 
         async_rl=True,  # False
+
+        decorrelate_experience_max_seconds=100
     )
 
 

@@ -1,1 +1,3 @@
-cd tmp && sudo mininet_rlcc_in_use.py
+cd tmp && sudo python train.py (train env)
+
+python train.py
