@@ -1,3 +1,5 @@
-cd tmp && sudo mininet_rlcc_env_exp.py
+run exp env (rlcc-playground-mininet) first
+cd tmp && sudo python exp.py
 
-python run
+run rl train:
+python run.py
