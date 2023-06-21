@@ -4,8 +4,9 @@ import torch.nn as nn
 import sys
 import gym
 import gym_rlcc
-from gym_rlcc.envs import RlccEnvMultiR
+from gym_rlcc.envs import RlccEnvR
 from ray.rllib.algorithms import ppo
+from ray.rllib.algorithms import impala
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
 
@@ -14,19 +15,6 @@ from ray.rllib.examples.models.rnn_model import TorchRNNModel
 from ray.rllib.models import ModelCatalog
 
 ray.init(ignore_reinit_error=True)
-
-
-def reward(state):
-    # print(state, state[0] , type(state[0]))
-    # tuhroughput/(rtt/10000 * loss)
-    # rtt,srtt max 8*10^8  throughput
-    try:
-        rewardvalue = state[0] / ((state[1]) * (state[5] + 1))
-    except:
-        print(f"state error : {state}")
-        rewardvalue = state[0]
-    return rewardvalue
-
 
 # test = gym.make("gym_rlcc/rlcc-v0", config={"rlcc_flag":1001, "reward_function":reward})
 # print(test)
@@ -37,11 +25,9 @@ class MultiEnv(gym.Env):
         # pick actual env based on worker and env indexes
         worker_index = env_config.worker_index
         vector_index = env_config.vector_index  # 0,1,2,3,4,5,6,7,8,9
-        # print(worker_index, vector_index)
+        print(worker_index, vector_index)
         # self.env = gym.make("my_env", config={"rlcc_flag":1001, "reward_function":reward})
-        self.env = RlccEnvMultiR(
-            config={"rlcc_flag": 1001 + worker_index, "reward_function": reward}
-        )
+        self.env = RlccEnvR(config={"rlcc_flag": 1001 + worker_index, "plan": 2, "maxsteps":1800})
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
 
@@ -56,20 +42,26 @@ register_env("multienv", lambda config: MultiEnv(config))
 
 # https://zhuanlan.zhihu.com/p/363045859
 # https://zhuanlan.zhihu.com/p/80169381
-algo = ppo.PPO(
+algo = impala.Impala(
     env="multienv",
     config={
         "framework": "torch",
         "disable_env_checking": True,
-        # "num_envs_per_worker":20,
+        # "num_envs_per_worker":10,
         "num_envs_per_worker": 1,
-        "num_workers": 0,
+        "num_gpus": 1,
+        "num_workers":8,
+        # "batch_mode": "truncate_episodes",    # 会采样卡顿
         "batch_mode": "complete_episodes",
         "sample_async": True,
+        # "sample_async": False,  # 线性动作开始训练会很慢，一次长度>600s，导致async超时
+
+        "recreate_failed_workers":True,
+
         "gamma": 0.99,
         "lr": 5e-5,
         "model": {
-            "fcnet_hiddens": [512, 256],
+            "fcnet_hiddens": [64, 512, 256, 64],
             # "use_lstm": True,
             # "max_seq_len": 30,      # 训练的序列最长30步
             # "lstm_cell_size": 256,
@@ -79,49 +71,27 @@ algo = ppo.PPO(
     },
 )
 
+algo.restore("/home/seclee/coding/train-rlcc/rllib/single/checkpoint/checkpoint_000020")
 
-# total 266万8千  667
-# 125论 对应 50万步
-algo.restore("/home/seclee/coding/rllibtest/rllib/ns6_200_checkpoint/checkpoint_000470")
+stop_iter = 1000
 
-
-import numpy as np
-
-# testobs = torch.Tensor(np.array([400000,30000,30000, 1365,0,0,0])).unsqueeze(0)
-# action = algo.compute_single_action(testobs)
-# print(action)
-
-
-## run game
-rlcc_flag = 1001
-
-
-def reward(state):
-    # print(state, state[0] , type(state[0]))
-    # tuhroughput/(rtt/10000 * loss)
-    # rtt,srtt max 8*10^8  throughput
+iter = 0
+while iter < stop_iter:
     try:
-        rewardvalue = state[0] / ((state[1]) * (state[5] + 1))
-    except:
-        print(f"state error : {state}")
-        rewardvalue = state[0]
-    return rewardvalue
+        if iter % 10 == 0:
+            print(f"\n save at {iter} \n")
+            algo.save("./checkpoint1")
+        print(algo.train())
+        iter += 1
+        # result = algo.train()
+        # print(pretty_print(result))
+        # if (
+        #         result["timesteps_total"] >= stop_timesteps
+        #     ):
+        #         break
+    except KeyboardInterrupt:
+        algo.stop()
+        algo.save("./checkpoint1")
+        sys.exit(1)
 
-
-config = {
-    "rlcc_flag": rlcc_flag,
-    # "reward_function" : reward
-}
-
-env = gym.make("gym_rlcc/rlcc-v0", config=config)
-
-for episode in range(1):
-    done = False
-    observation = env.reset()  # 初始化环境每次迭代
-    print(f"start episode {episode}")
-    while not done:
-        action = algo.compute_single_action(observation)
-        observation, reward, done, info = env.step(action)
-        print(observation, reward, done)
-
-env.close()
+algo.stop()

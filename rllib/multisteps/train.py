@@ -4,7 +4,7 @@ import torch.nn as nn
 import sys
 import gym
 import gym_rlcc
-from gym_rlcc.envs.rlcc_world_multi import RlccEnvMulti
+from gym_rlcc.envs import RlccEnvMultiR
 from ray.rllib.algorithms import ppo
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
@@ -29,7 +29,7 @@ class MultiEnv(gym.Env):
         # plan1. 100ms fixed monitor interval
         # plan2. minrtt+100ms sample method
         # plan3. double rtt sample method
-        self.env = RlccEnvMulti(config={"rlcc_flag": 1001 + vector_index, "plan": 3, "maxsteps":1800})
+        self.env = RlccEnvMultiR(config={"rlcc_flag": 1001 + worker_index, "plan": 3, "maxsteps":1800})
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
 

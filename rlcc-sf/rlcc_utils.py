@@ -61,8 +61,9 @@ def rlcc_override_defaults(env, parser):
         num_workers=8, # 8
         num_envs_per_worker=1, # 8
         worker_num_splits=1, # 2 : double-buffered sampling
-        train_for_env_steps=10000000,
-        encoder_mlp_layers=[512, 256], # [64, 64]
+        # train_for_env_steps=1800,
+        train_for_seconds=120,
+        encoder_mlp_layers=[64, 512, 256, 64], # [64, 64]
         env_frameskip=1,
         nonlinearity="tanh",
         batch_size=1024, # 1024
@@ -72,8 +73,6 @@ def rlcc_override_defaults(env, parser):
         policy_initialization="torch_default",
         reward_scale=1,
         max_grad_norm=3.5,
-        num_epochs=2,  # 
-        num_batches_per_epoch=4, #
         ppo_clip_ratio=0.2,
         value_loss_coeff=1.3,
         exploration_loss_coeff=0.0,

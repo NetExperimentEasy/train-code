@@ -4,7 +4,7 @@ import torch.nn as nn
 import sys
 import gym
 import gym_rlcc
-from gym_rlcc.envs.rlcc_world import RlccEnv
+from gym_rlcc.envs import RlccEnvR
 from ray.rllib.algorithms import ppo
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
@@ -26,7 +26,7 @@ class MultiEnv(gym.Env):
         vector_index = env_config.vector_index  # 0,1,2,3,4,5,6,7,8,9
         print(worker_index, vector_index)
         # self.env = gym.make("my_env", config={"rlcc_flag":1001, "reward_function":reward})
-        self.env = RlccEnv(config={"rlcc_flag": 1001 + vector_index, "plan": 2, "maxsteps":1800})
+        self.env = RlccEnvR(config={"rlcc_flag": 1001 + worker_index, "plan": 1, "maxsteps":1800})
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
 
@@ -67,7 +67,7 @@ algo = ppo.PPO(
     },
 )
 
-# algo.restore("/home/seclee/coding/rllibtest/rllib/checkpoint/checkpoint_000016")
+algo.restore("/home/seclee/coding/train-rlcc/rllib/single/checkpoint_ppo_1/checkpoint_000050")
 
 stop_iter = 1000
 
@@ -76,7 +76,7 @@ while iter < stop_iter:
     try:
         if iter % 10 == 0:
             print(f"\n save at {iter} \n")
-            algo.save("./checkpoint")
+            algo.save("./checkpoint_ppo_2")
         print(algo.train())
         iter += 1
         # result = algo.train()
@@ -87,7 +87,7 @@ while iter < stop_iter:
         #         break
     except KeyboardInterrupt:
         algo.stop()
-        algo.save("./checkpoint")
+        algo.save("./checkpoint_ppo_3")
         sys.exit(1)
 
 algo.stop()
